@@ -1,0 +1,275 @@
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+Cutting Knowledge Date: December 2023
+Today Date: 26 Jul 2024
+
+You need to evaluate how well a household assistive robot's performance aligns with Mark's preferences for tasks such as Prepare eggs for breakfast, Prepare omelette for breakfast, Prepare cereal for breakfast, Make toast and coffee for breakfast, Make yoghurt parfait for breakfast, Make tea and eggs for breakfast, Make cereal and coffee for breakfast, Make toast and eggs for breakfast, Make pancakes for breakfast, Make a french toast for breakfast, Make coffee and oatmeal for breakfast, Prepare tea and cheese toast for breakfast, by writing helper functions to evaluate any robot interaction. Write a python function to check for each individual preference, which returns one of three string values: 'violated', 'satisfied' and 'inapplicable'. Consider including preferences such as things that Mark is particular about using or avoiding, quantities of different items, locations where they would like the objects to be placed, preferred order of different tasks or actions, how strongly a preference needs to be followed, how the robot should behave when an action is not feasible exactly as preferred, how the robot should perform certain actions, when and what kind of things it should clarify, etc. Include ALL preferences, which can be reliably verified given the helper functions available, and avoid preferences that are specific to a single task as much as possible. be sure to preface each function with a one-line comment describing the preference. Each preference must be simple and verifiable. Use only the helper functions that are imported at the top, and inbuilt python functions. Use function arguments to input appropriate objects present in the environment, and do not define any object names yourself, as they may not exist in the environment being evaluated.<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Write preference evaluation functions for Carlos. You know the following about Carlos:
+Carlos, a 30-year-old foodie, enjoys starting his day with a flavorful breakfast. He likely prefers scrambled eggs or an omelette, cooked with fresh herbs and spices, and served with whole-grain toast, toasted with olive oil and topped with avocado or hummus. His coffee is brewed strong, using high-quality beans, and enjoyed black or with a splash of plant-based milk. When making oatmeal, Carlos probably cooks it with water or a combination of water and plant-based milk, adding a drizzle of honey or maple syrup for sweetness.
+
+Pancakes and French toast are also a hit, topped with sweet ingredients like fresh fruits, nuts, or seeds, and a sprinkle of cinnamon or cardamom. Carlos's yogurt preference is likely flavored, mixed with granola or fruit, and made from plant-based sources. Breakfast meats are often grilled or pan-fried, using olive oil and a blend of spices, and served with a side of sautéed vegetables. Although tea isn't his go-to beverage, he might enjoy it hot, without milk and sugar, and infused with herbs like mint or lemongrass.
+
+Cereal is typically served with plant-based milk, and Carlos prioritizes incorporating protein, healthy fats, and complex carbohydrates into his breakfasts. Melted cheese is not a staple in his diet, given his lactose intolerance, but he might enjoy vegan cheese alternatives or nutritional yeast as a substitute. Hash browns are likely shredded or diced, cooked with olive oil and a pinch of salt, and served as a crispy side dish. Fresh herbs or edible flowers add a pop of color and flavor to his breakfast dishes, and leftovers are usually stored in the fridge for later consumption.
+
+Serving all breakfast items at once is convenient for Carlos, and he'd appreciate using his favorite serving dishes and utensils. Preparing beverages first would be a good approach, allowing him to start his day with a refreshing drink. As a special treat, Carlos might enjoy a surprise breakfast dessert, like pancakes or waffles with fresh fruit and coconut whipped cream. When adding cheese and vegetables to eggs, Carlos likely prefers vegan cheese alternatives and sautéed or roasted vegetables. He probably adds cereal to plant-based milk rather than the other way around. Sides like grilled meats, sautéed vegetables, or whole-grain toast complement his breakfast choices.
+
+The kitchen table or a sunny outdoor spot are his preferred places for enjoying breakfast. To better assist Carlos, it's essential to prioritize using fresh, locally-sourced ingredients, plant-based milk alternatives, and eco-friendly cleaning products, while also respecting his love for spicy foods, bold flavors, and high-quality kitchen tools.<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+#### Get lists of functions and entities used by the robot throughout the interaction ####
+from interaction_utils import task_goal, is_object_left_at_location, is_action_performed, is_available, is_full, are_objects_mixed, is_used, is_used_before, are_objects_mixed_in_order, is_created, is_added_while_preparing
+#### Get lists of functions and entities used by the robot throughout the interaction ####
+from interaction_utils import task_goal, is_object_left_at_location, is_action_performed, is_available, is_full, are_objects_mixed, is_used, is_used_before, are_objects_mixed_in_order, is_created, is_added_while_preparing, all_final_food_location
+## When cooking savory ingredients, such as eggs or vegetables, use at least two spices ##
+def two_spices_if_savory_food(list_of_savory_ingredients, list_of_spices):
+    if is_used(list_of_savory_ingredients):
+        if sum([is_used(x) for x in list_of_spices]) < 2:
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Use fresh herbs if cooking eggs ##
+def fresh_herbs_if_eggs(list_of_eggs, list_of_fresh_herbs):
+    if is_used(list_of_eggs):
+        if not is_used(list_of_fresh_herbs):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When making eggs, scramble them or make an omelet ##
+def scramble_or_omelet_if_eggs(list_of_eggs):
+    if is_used(list_of_eggs):
+        if is_created('scramble') or is_created('omelet'):
+            return 'satisfied'
+        return 'violated'
+    return 'inapplicable'
+## When cooking eggs serve with whole grain toast ##
+def whole_grain_toast_if_eggs(list_of_eggs, list_of_whole_grain_toasts):
+    if is_used(list_of_eggs):
+        if not is_used(list_of_whole_grain_toasts):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When making coffee, serve black or with plant-based milk ##
+def black_or_plant_based_milk_if_coffee(list_of_coffees, list_of_non_plant_based_milk):
+    if is_used(list_of_coffees) or is_created('coffee'):
+        if are_objects_mixed(list_of_non_plant_based_milk, list_of_coffees) or is_added_while_preparing(list_of_non_plant_based_milk, 'coffee'):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Mix oatmeal either only with water or with water and plant-based milk ## 
+def water_or_water_and_plant_based_milk_if_oatmeal(list_of_oatmeal, list_of_waters, list_of_non_plant_based_milk):
+    if is_used(list_of_oatmeal):
+        if not are_objects_mixed(list_of_waters, list_of_oatmeal):
+            return 'violated'
+        if are_objects_mixed(list_of_non_plant_based_milk, list_of_oatmeal):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Add honey or maple syrup to oatmeal ##
+def honey_or_maple_syrup_if_oatmeal(list_of_oatmeal, list_of_honeys, list_of_maple_syrups):
+    if is_used(list_of_oatmeal):
+        if not are_objects_mixed(list_of_honeys, list_of_oatmeal):
+            if not are_objects_mixed(list_of_maple_syrups, list_of_oatmeal):
+                return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Add fresh fruits, nuts, or seeds on french toast or pancakes or waffles ##
+def fresh_fruits_nuts_seeds_if_french_toast_or_pancakes_or_waffles(list_of_french_toast, list_of_pancakes, list_of_waffles, list_of_fresh_fruits, list_of_nuts, list_of_seeds):
+    if not is_used(list_of_french_toast) or is_created('french toast') and not is_used(list_of_waffles) or is_created('waffle') and not is_used(list_of_pancakes) or is_created('pancake'):
+        return 'inapplicable'
+    if is_used(list_of_french_toast) or is_created('french toast'):
+        if not are_objects_mixed(list_of_fresh_fruits, list_of_french_toast) or is_added_while_preparing(list_of_fresh_fruits, 'french toast'):
+            if not are_objects_mixed(list_of_nuts, list_of_french_toast) or is_added_while_preparing(list_of_nuts, 'french toast'):
+                if not are_objects_mixed(list_of_seeds, list_of_french_toast) or is_added_while_preparing(list_of_seeds, 'french toast'):
+                    return 'violated'
+    if is_used(list_of_waffles) or is_created('waffle'):
+        if not are_objects_mixed(list_of_fresh_fruits, list_of_waffles) or is_added_while_preparing(list_of_fresh_fruits, 'waffle'):
+            if not are_objects_mixed(list_of_nuts, list_of_waffles) or is_added_while_preparing(list_of_nuts, 'waffle'):
+                if not are_objects_mixed(list_of_seeds, list_of_waffles) or is_added_while_preparing(list_of_seeds, 'waffle'):
+                    return 'violated'
+    if is_used(list_of_pancakes) or is_created('pancake'):
+        if not are_objects_mixed(list_of_fresh_fruits, list_of_pancakes) or is_added_while_preparing(list_of_fresh_fruits, 'pancake'):
+            if not are_objects_mixed(list_of_nuts, list_of_pancakes) or is_added_while_preparing(list_of_nuts, 'pancake'):
+                if not are_objects_mixed(list_of_seeds, list_of_pancakes) or is_added_while_preparing(list_of_seeds, 'pancake'):
+                    return 'violated'
+    return 'satisfied'
+## Add cinnamon or cardamom on french toast or pancakes or waffles ##
+def cinnamon_or_cardamom_if_french_toast_or_pancakes_or_waffles(list_of_french_toast, list_of_pancakes, list_of_waffles, list_of_cinnamon, list_of_cardamom):
+    if not is_used(list_of_french_toast) or is_created('french toast') and not is_used(list_of_waffles) or is_created('waffle') and not is_used(list_of_pancakes) or is_created('pancake'):
+        return 'inapplicable'
+    if is_used(list_of_french_toast) or is_created('french toast'):
+        if not are_objects_mixed(list_of_cinnamon, list_of_french_toast) or is_added_while_preparing(list_of_cinnamon, 'french toast'):
+            if not are_objects_mixed(list_of_cardamom, list_of_french_toast) or is_added_while_preparing(list_of_cardamom, 'french toast'):
+                    return 'violated'
+    if is_used(list_of_waffles) or is_created('waffle'):
+        if not are_objects_mixed(list_of_cinnamon, list_of_waffles) or is_added_while_preparing(list_of_cinnamon, 'waffle'):
+            if not are_objects_mixed(list_of_cardamom, list_of_waffles) or is_added_while_preparing(list_of_cardamom, 'waffle'):
+                    return 'violated'
+    if is_used(list_of_pancakes) or is_created('pancake'):
+        if not are_objects_mixed(list_of_cinnamon, list_of_pancakes) or is_added_while_preparing(list_of_cinnamon, 'pancake'):
+            if not are_objects_mixed(list_of_cardamom, list_of_pancakes) or is_added_while_preparing(list_of_cardamom, 'pancake'):
+                    return 'violated'
+    return 'satisfied'
+## When using yoghurt prefer flavored yoghurts ##
+def flavored_yoghurt_if_yoghurt(list_of_yoghurts, list_of_flavored_yoghurts):
+    if is_used(list_of_yoghurts):
+        if not is_used(list_of_flavored_yoghurts):
+            return 'violated'
+        else:
+            return 'satisfied'
+    return 'inapplicable'
+## When using yoghurt, add granola or fruit ##
+def granola_or_fruit_if_yoghurt(list_of_yoghurts, list_of_granola, list_of_fruit):
+    if is_used(list_of_yoghurts):
+        if not are_objects_mixed(list_of_granola, list_of_yoghurts):
+            if not are_objects_mixed(list_of_fruit, list_of_yoghurts):
+                return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When using breakfast meats, eith grill or pan-fry ##
+def grill_or_pan_fry_if_breakfast_meats(list_of_breakfast_meats):
+    if is_used(list_of_breakfast_meats):
+        if not is_action_performed('grill', list_of_breakfast_meats) or is_action_performed('pan-fry', list_of_breakfast_meats):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When using breakfast meats, using olive oil and a blend of spices ##
+def olive_oil_and_spices_if_breakfast_meats(list_of_breakfast_meats, list_of_olive_oils, list_of_spices):
+    if is_used(list_of_breakfast_meats):
+        if not are_objects_mixed(list_of_olive_oils, list_of_breakfast_meats):
+            return 'violated'
+        if not are_objects_mixed(list_of_spices, list_of_breakfast_meats):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When using breakfast meats, serve with sauteed or fried vegetables ##
+def sauteed_vegetables_if_breakfast_meats(list_of_breakfast_meats, list_of_vegetables):
+    if is_used(list_of_breakfast_meats):
+        if not is_used(list_of_vegetables):
+            return 'violated'
+        if not is_action_performed('saute', list_of_vegetables) or is_action_performed('fry', list_of_vegetables) or is_action_performed('cook', list_of_vegetables):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Serve tea without milk and sweetners ##
+def no_milk_or_sweetners_if_tea(list_of_tea, list_of_milks, list_of_sweetners):
+    if is_used(list_of_tea):
+        if are_objects_mixed(list_of_milks, list_of_tea):
+            return 'violated'
+        if are_objects_mixed(list_of_sweetners, list_of_tea):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Use plant-based milk with cereal ##
+def plant_based_milk_with_cereal(list_of_cereals, list_of_plant_based_milks):
+    if is_used(list_of_cereals):
+        if not are_objects_mixed(list_of_plant_based_milks, list_of_cereals):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Include a healthy fat, a protein and a complex carbohydrate
+def healthy_fat_protein_carbohydrate(list_of_healthy_fats, list_of_proteins, list_of_complex_carbohydrates):
+    if sum([is_used(x) for x in list_of_healthy_fats]) < 1:
+        return 'violated'
+    if sum([is_used(x) for x in list_of_proteins]) < 1:
+        return 'violated'
+    if sum([is_used(x) for x in list_of_complex_carbohydrates]) < 1:
+        return 'violated'
+    return 'satisfied'
+## When using cheese, use vegan cheese ##
+def vegan_cheese_if_cheese(list_of_cheese, list_of_vegan_cheese):
+    if is_used(list_of_cheese):
+        if not is_used(list_of_vegan_cheese):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When making hash browns shred or dice ##
+def shred_or_dice_if_hash_browns(list_of_potatoes):
+    if is_used(list_of_potatoes) and is_created('hash browns'):
+        if not is_action_performed('shred', list_of_potatoes) or is_action_performed('dice', list_of_potatoes):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When making hash browns, use olive oil and a pinch of salt##
+def olive_oil_and_salt_if_hash_browns(list_of_hash_browns, list_of_olive_oils, list_of_salts):
+    if is_used(list_of_hash_browns) or is_created('hash browns'):
+        if not are_objects_mixed(list_of_olive_oils, list_of_hash_browns) or is_added_while_preparing(list_of_olive_oils, 'hash browns'):
+            return 'violated'
+        if not are_objects_mixed(list_of_salts, list_of_hash_browns) or is_added_while_preparing(list_of_salts, 'hash browns'):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Add fresh herbs or edible flowers to savory dishes ##
+def fresh_herbs_or_edible_flowers_if_savory_dishes(list_of_savory_dishes, list_of_fresh_herbs, list_of_edible_flowers):
+    if is_used(list_of_savory_dishes):
+        if not are_objects_mixed(list_of_fresh_herbs, list_of_savory_dishes):
+            if not are_objects_mixed(list_of_edible_flowers, list_of_savory_dishes):
+                return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Preparing beverages first, when making breakfast ##
+def beverages_before_food(list_of_coffee_and_tea, list_of_food):
+    if is_used(list_of_coffee_and_tea) and is_used(list_of_food):
+        if not is_used_before(list_of_coffee_and_tea,list_of_food):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Mix milk then cereal, in that order ##
+def first_mix_milk_then_cereal(list_of_milks, list_of_cereals):
+    if is_used(list_of_milks) and  is_used(list_of_cereals):
+        if not are_objects_mixed_in_order(list_of_milks, list_of_cereals):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When using eggs, cook them ##
+def cook_when_using_eggs(list_of_eggs, list_cooking_appliances):
+    if is_used(list_of_eggs):
+        if not ((is_action_performed('cook', list_of_eggs) or is_used(list_cooking_appliances))):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When making an omelet, add at least 2 vegetables ##
+def at_least_two_vegetables_when_making_omelet(list_of_vegetables):
+    if 'omelet' in task_goal or is_created('omelet'):
+        if sum([is_used(x) for x in list_of_vegetables]) < 2:
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## When using onions or bell peppers, sautee them ##
+def sautee_onions_and_peppers(list_of_onions, list_of_bell_peppers):
+    if is_used(list_of_onions):
+        if not is_action_performed('saute', list_of_onions) or is_action_performed('cook', list_of_onions):
+            return 'violated'
+        return 'satisfied'
+    if is_used(list_of_bell_peppers):
+        if not is_action_performed('saute', list_of_bell_peppers) or is_action_performed('cook', list_of_bell_peppers):
+            return 'violated'
+        return 'satisfied'
+    return 'inapplicable'
+## Finally, serve food at a dining location
+def serve_at_dining_location(list_of_dining_locations):
+    if all_final_food_location(list_of_dining_locations):
+        return 'satisfied'
+    return 'violated'<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+Write preference evaluation functions for Mark. You know the following about Mark:
+Mark is a straightforward and no-nonsense kind of guy, especially when it comes to his breakfast preferences. When cooking eggs, he prefers them scrambled or over easy - nothing too fancy. He likes his toast buttered, but not too heavily, and isn't a fan of spreads or jams. Mark's coffee should be brewed strong, just like his personality.
+
+When making oatmeal, Mark likes it cooked with milk, and he's not picky about the type of milk used. As for pancakes or French toast, he has a sweet tooth, so topping them with syrup, honey, or fresh fruit is always a good idea. Mark prefers his yogurt plain, but will occasionally mix in some granola or fruit for added texture and flavor. Breakfast meats should be grilled or pan-fried - he loves the crispy exterior and juicy interior.
+
+As for tea, Mark isn't much of a fan, but if he had to choose, he'd take it hot with a bit of sugar. Cereal is usually served with milk, and he's not particular about the type of cereal, as long as it's not too sugary. Mark tries to incorporate protein and complex carbohydrates into his breakfasts, while avoiding overly processed foods.
+
+When adding cheese to his eggs, Mark likes it melted, and he's particularly fond of cheddar or American. Vegetables like bell peppers, onions, and mushrooms are great additions to omelettes or scrambled eggs. Mark prefers his hash browns shredded, and they should be cooked until crispy on the outside and fluffy on the inside.
+
+In terms of serving, Mark likes all his breakfast items brought out at once, so he can dig in and enjoy his meal without fuss. Simple serving dishes and utensils are fine by him - nothing too fancy or ornate. Beverages should be prepared first, followed by food. One special request Mark has is that his breakfast be served in the backyard or on the patio, weather permitting. He loves starting his day surrounded by nature.
+
+One final note: Mark values cleanliness and organization, so be sure to tidy up after breakfast and wash any dishes immediately. This will help keep him happy and make the rest of the day run smoothly.
+
+Additional details:
+- Add cereal to milk.
+- Sides: Hash browns, bacon, sausages, and toast are all great options.
+- Cheese and vegetables can be added to eggs in various preparations such as omelets, frittatas, and breakfast burritos.
+- No need for garnishes or edible flowers.
+- Store leftovers in the fridge for later use.
+- Use simple, sturdy utensils and serving dishes.
+- Don't forget to clean up immediately after breakfast!<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+

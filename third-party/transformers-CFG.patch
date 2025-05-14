@@ -1,0 +1,39 @@
+From 806554c63fd69b04651ef9d0a68e4cf279574be3 Mon Sep 17 00:00:00 2001
+From: Maithili Patel <maithili@sky2.gatech.edu>
+Date: Wed, 23 Apr 2025 12:24:23 -0400
+Subject: [PATCH] local model support
+
+---
+ transformers_cfg/tokenization/middle/TokenizerMiddleMapping.py | 2 +-
+ transformers_cfg/tokenization/tokenizer.py                     | 2 +-
+ 2 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/transformers_cfg/tokenization/middle/TokenizerMiddleMapping.py b/transformers_cfg/tokenization/middle/TokenizerMiddleMapping.py
+index b296f6a..8664f02 100644
+--- a/transformers_cfg/tokenization/middle/TokenizerMiddleMapping.py
++++ b/transformers_cfg/tokenization/middle/TokenizerMiddleMapping.py
+@@ -44,7 +44,7 @@ class TokenizerMiddleMapping:
+             return T5TokenizerMiddleMapping(hf_tokenizer)
+         elif isinstance(
+             hf_tokenizer, PreTrainedTokenizerFast
+-        ) and hf_tokenizer.name_or_path.startswith("meta-llama/Meta-Llama-3"):
++        ) and 'Llama-3' in hf_tokenizer.name_or_path:
+             return GPT2TokenizerMiddleMapping(hf_tokenizer)
+ 
+     @staticmethod
+diff --git a/transformers_cfg/tokenization/tokenizer.py b/transformers_cfg/tokenization/tokenizer.py
+index 21ed50f..18252ac 100644
+--- a/transformers_cfg/tokenization/tokenizer.py
++++ b/transformers_cfg/tokenization/tokenizer.py
+@@ -60,7 +60,7 @@ class TCFG_Tokenizer:
+             return TCFG_PhiTokenizer(hf_tokenizer)
+         elif isinstance(
+             hf_tokenizer, PreTrainedTokenizerFast
+-        ) and hf_tokenizer.name_or_path.startswith("meta-llama/Meta-Llama-3"):
++        ) and 'Llama-3' in hf_tokenizer.name_or_path:
+             return TCFG_LlamaTokenizer(hf_tokenizer)
+         else:
+             raise NotImplementedError(
+-- 
+2.25.1
+

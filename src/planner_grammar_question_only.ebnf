@@ -1,0 +1,5 @@
+root ::= syntax_ask " "* "."? "<|eot_id|>"
+
+syntax_ask ::= "Ask " content_question
+
+content_question ::= "\"" [ '()_.,-?!/a-zA-Z_0-9]+ "\""

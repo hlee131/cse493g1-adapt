@@ -1,0 +1,3 @@
+[submodule "third-party/transformers-CFG"]
+	path = third-party/transformers-CFG
+	url = https://github.com/epfl-dlab/transformers-CFG.git

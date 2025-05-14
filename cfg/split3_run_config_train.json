@@ -1,0 +1,33 @@
+{
+    "personas": [
+        "Lisa",
+        "Samantha",
+        "Mark",
+        "Leila",
+        "Jamal",
+        "Carlos",
+        "Maria",
+        "Juan",
+        "Maya",
+        "Nalini",
+        "Ramesh",
+        "Ethan"
+    ],
+    "goals": [
+        "Prepare eggs for breakfast",
+        "Prepare omelette for breakfast",
+        "Prepare cereal for breakfast",
+        "Make toast and coffee for breakfast",
+        "Make yoghurt parfait for breakfast",
+        "Make tea and eggs for breakfast",
+        "Make cereal and coffee for breakfast",
+        "Prepare tea and toast for breakfast"
+    ],
+    "skip": [],
+    "high_temperature": false,
+    "sample_environment": true,
+    "force_corrections": true,
+    "skip_persona_syntax_failures": true,
+    "max_steps_executed": 50,
+    "max_steps_predicted": 50
+}

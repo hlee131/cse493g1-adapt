@@ -1,0 +1,41 @@
+root ::= action_complete " "* "."? "<|eot_id|>"
+
+action_complete ::= syntax_ask | syntax_states | syntax_heat | syntax_find | syntax_search | syntax_new_contents | syntax_chop | syntax_new_object | syntax_move_from | syntax_move | syntax_pour | syntax_single
+
+syntax_ask ::= "Ask " content_question
+
+syntax_states ::= ( "Open" | "Close" | "Turn on" | "Turn off" ) " " existing_entity
+
+syntax_find ::= ("Look for" | "Find") " " search_word " "? "."
+
+syntax_search ::= "Search " existing_entity
+
+syntax_new_contents ::= ("Mix all items in" | "Cook items in" | freeform_contents_action) " " existing_filled_containers " to get " new_entity
+
+freeform_contents_action ::= action_name " items in"
+
+syntax_new_object ::=  (freeform_object_action) " " (existing_foods | existing_food_containers) " to get " new_entity
+
+freeform_object_action ::= action_name " the object"
+
+syntax_move ::= ("Move " | "Serve the object " | "Place the object ") existing_entity_or_content " to " existing_entity
+
+syntax_move_from ::= "Move " existing_content_containers " to " existing_entity
+
+syntax_pour ::= "Pour " existing_content_containers ( " to " | " into " ) existing_containers
+
+new_entity ::= content_single_word ("_")? (n)? (n)?
+
+search_word ::= ([a-zA-Z])(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?(l)?
+
+content_question ::= "\"" [ '()_.,-?!/a-zA-Z_0-9]+ "\""
+
+content_single_word ::= ([a-zA-Z])(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?(lu)?
+
+l ::= [a-zA-Z_]
+
+lu ::= [a-zA-Z_]
+
+n ::= [0-9]
+
+

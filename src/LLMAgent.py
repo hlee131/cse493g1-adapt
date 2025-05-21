@@ -23,7 +23,7 @@ from src.utils import (
     #BASE_DIR,
     NO_CONSTRAINED_GENERATION,
 )
-sys.path.append(f"{BASE_DIR}/fast_gpt_local/habitat-llm")
+#sys.path.append(f"{BASE_DIR}/fast_gpt_local/habitat-llm")
 
 from env.reward_models.persona_rewards.get_preference_list import get_preference_list
           

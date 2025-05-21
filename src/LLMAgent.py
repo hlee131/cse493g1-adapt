@@ -20,7 +20,7 @@ from src.utils import (
     planner_system_prompt,
     prompt_from_rollout,
     privileged_task_descriptions,
-    BASE_DIR,
+    #BASE_DIR,
     NO_CONSTRAINED_GENERATION,
 )
 sys.path.append(f"{BASE_DIR}/fast_gpt_local/habitat-llm")
@@ -46,21 +46,21 @@ LOCAL_MODELS = {}
 class LLMAgent():
     def __init__(self, llm_runname=None):
         path = llm_runname
-        if path is None:
-            path = f"{BASE_DIR}/models/Meta-Llama-3.1-8B-Instruct"
+        # if path is None:
+        #     path = f"{BASE_DIR}/models/Meta-Llama-3.1-8B-Instruct"
         self.model_in_path = path
         if path in LOCAL_MODELS:
             self.model = LOCAL_MODELS[path]['model']
             self.tokenizer = LOCAL_MODELS[path]['tokenizer']
         else:    
             self.tokenizer = AutoTokenizer.from_pretrained(self.model_in_path)
-            self.model_cache_dir = (
-                f"{BASE_DIR}/models/cache"
-            )
+            # self.model_cache_dir = (
+            #     f"{BASE_DIR}/models/cache"
+            # )
             self.model = AutoModelForCausalLM.from_pretrained(
                 self.model_in_path,
                 device_map="auto",
-                cache_dir=self.model_cache_dir,
+                #cache_dir=self.model_cache_dir,
                 torch_dtype=torch.bfloat16,
             )
             LOCAL_MODELS[path] = {'model':self.model, 'tokenizer':self.tokenizer}
@@ -478,8 +478,8 @@ class LLMAgent_Planner(LLMAgent):
         if unconstrained_planner:
             action_grammar_str = None
         
-        if force_ask:
-            action_grammar_str = open(os.path.join(BASE_DIR,'PolicyPersonalization/src/planner_grammar_question_only.ebnf')).read()
+        # if force_ask:
+        #     action_grammar_str = open(os.path.join(BASE_DIR,'PolicyPersonalization/src/planner_grammar_question_only.ebnf')).read()
         
         if no_generate:
             return None , None, action_grammar_str, [system_prompt_msg] + prompt_msgs, None

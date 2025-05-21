@@ -99,7 +99,7 @@ class Environment():
         self.invalid_actions = {}
         if MATCH_USING_SIMILARITY:
             # global embedding_cache_
-            # object_embeddings_dict = embedding_cache_
+            object_embeddings_dict = {}
             # if object_embeddings_dict is None:
                 #embedding_cache_file = os.path.join(BASE_DIR, "PolicyPersonalization/_sentence_embeddings_minilm.pt")
                 # print(f"Reading embeddings from {embedding_cache_file}")

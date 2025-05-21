@@ -9,15 +9,15 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers import util as st_utils
 from src.utils import *
 
-global embedding_cache_
-embedding_cache_ = None
-for retries in range(10):
-    try:
-        embedding_cache_ = torch.load(os.path.join(BASE_DIR, "PolicyPersonalization/_sentence_embeddings_minilm.pt"), map_location=DEVICE, weights_only=False)
-        break
-    except:
-        print(f"Trying to read {os.path.join(BASE_DIR, 'PolicyPersonalization/_sentence_embeddings_minilm.pt')} again...")
-        time.sleep(random.random())
+# global embedding_cache_
+# embedding_cache_ = None
+# for retries in range(10):
+#     try:
+#         embedding_cache_ = torch.load(os.path.join(BASE_DIR, "PolicyPersonalization/_sentence_embeddings_minilm.pt"), map_location=DEVICE, weights_only=False)
+#         break
+#     except:
+#         print(f"Trying to read {os.path.join(BASE_DIR, 'PolicyPersonalization/_sentence_embeddings_minilm.pt')} again...")
+#         time.sleep(random.random())
 
 MATCH_USING_SIMILARITY = True
 if MATCH_USING_SIMILARITY:

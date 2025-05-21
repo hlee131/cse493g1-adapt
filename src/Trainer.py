@@ -18,7 +18,7 @@ from trl import DataCollatorForCompletionOnlyLM, SFTConfig, SFTTrainer
 
 from src.Environment import Environment
 from src.utils import (
-    BASE_DIR,
+    # BASE_DIR,
     # Tokenizer will be provided by notebook
     # _tokenizer,
     now_timestr,

@@ -9,8 +9,8 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers import util as st_utils
 from src.utils import *
 
-# global embedding_cache_
-# embedding_cache_ = None
+global embedding_cache_
+embedding_cache_ = None
 # for retries in range(10):
 #     try:
 #         embedding_cache_ = torch.load(os.path.join(BASE_DIR, "PolicyPersonalization/_sentence_embeddings_minilm.pt"), map_location=DEVICE, weights_only=False)
@@ -98,8 +98,8 @@ class Environment():
         self.step_num = 0
         self.invalid_actions = {}
         if MATCH_USING_SIMILARITY:
-            # global embedding_cache_
-            object_embeddings_dict = {}
+            global embedding_cache_
+            object_embeddings_dict = embedding_cache_ if embedding_cache_ is not None else dict()
             # if object_embeddings_dict is None:
                 #embedding_cache_file = os.path.join(BASE_DIR, "PolicyPersonalization/_sentence_embeddings_minilm.pt")
                 # print(f"Reading embeddings from {embedding_cache_file}")
@@ -117,6 +117,8 @@ class Environment():
                     print(f"Embedding {obj_desc['description']}")
                     object_embeddings_dict[obj_desc['description']] = embed([obj_desc['description']])
             self.object_embeddings = torch.cat([object_embeddings_dict[obj_desc['description']] for obj_desc in self.full_scene.values()], dim=0)
+            if embedding_cache_ is None: 
+                embedding_cache_  = object_embeddings_dict
 
     def match_object_through_similarity(self, object_name):
         def match_object(object_name, object_name_in_scene):

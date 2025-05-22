@@ -136,6 +136,7 @@ class LLMAgent():
                 do_sample=False,
                 logits_processor = logits_processor_list
             )
+
             assert len(inputs.input_ids.shape) == 2
             output_scores = output.scores
             n_prompt_tokens = inputs.input_ids.shape[1]
@@ -164,7 +165,8 @@ class LLMAgent():
                     else:
                         break
                 else:
-                    prob = torch.softmax(output_scores[i][batch_i], 0)[generated_tokens_batch[batch_i][i]]
+                    # no data loss in bf16 -> fp32
+                    prob = torch.softmax(output_scores[i][batch_i], 0, dtype=torch.float32)[generated_tokens_batch[batch_i][i]]
                     mean_prob.append(prob.cpu())
 
             mean_prob = float(np.mean(mean_prob)) 

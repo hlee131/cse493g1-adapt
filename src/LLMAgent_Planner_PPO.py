@@ -1,147 +1,172 @@
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-from trl import PPOConfig, PPOTrainer, AutoModelForCausalLMWithValueHead
-from tqdm import tqdm
+from trl import AutoModelForCausalLMWithValueHead
+from transformers import AutoTokenizer
+from src.LLMAgent import LLMAgent_Planner, prompt_from_rollout, create_grammar
+from src.utils import planner_system_prompt
 
-from src.LLMAgent_Planner_PPO import LLMAgent_Planner_PPO
-from src.Environment import Environment
-from env.scene import SceneGenerator
-from src.utils import _tokenizer as global_tokenizer
-
-# --- Configuration ---
-ppo_config_params = {
-    "model_name": "path/to/your/sft_tuned_model",  # Your SFT model
-    "learning_rate": 1.41e-5,
-    "batch_size": 64,
-    "mini_batch_size": 4,
-    "gradient_accumulation_steps": 1,
-    "ppo_epochs": 4,
-    "log_with": "wandb",
-}
-config = PPOConfig(**ppo_config_params)
-
-# --- Model Loading ---
-# Load the policy model (your SFT-tuned model)
-policy_model = AutoModelForCausalLMWithValueHead.from_pretrained(
-    config.model_name,
-    device_map="auto",
-    torch_dtype=torch.bfloat16,
-    load_in_4bit=True  # Optional: for memory efficiency
-)
-
-# Load reference model (same as policy, but frozen)
-ref_model = AutoModelForCausalLMWithValueHead.from_pretrained(
-    config.model_name,
-    device_map="auto",
-    torch_dtype=torch.bfloat16,
-    load_in_4bit=True
-)
-
-# Initialize tokenizer
-tokenizer = AutoTokenizer.from_pretrained(config.model_name)
-if tokenizer.pad_token is None:
-    tokenizer.pad_token = tokenizer.eos_token
-
-# Initialize PPO Trainer with your models
-ppo_trainer = PPOTrainer(
-    config=config, 
-    model=policy_model, 
-    ref_model=ref_model, 
-    tokenizer=tokenizer
-)
-
-# Initialize PPO Planner Agent
-ppo_planner_agent = LLMAgent_Planner_PPO(
-    persona_id="PPO_Agent",
-    policy_model=ppo_trainer.model,  # Use the model from PPOTrainer
-    critic_model=ppo_trainer.critic,  # Use the critic from PPOTrainer
-    tokenizer_instance=tokenizer,
-    temperature_planner=0.7,
-    no_ask_option=False,
-    user_info_with_summary=False
-)
-
-# --- Training Loop ---
-max_ppo_steps = 1000
-max_episode_length = 50
-
-for ppo_step in tqdm(range(max_ppo_steps)):
-    # Collect batch of experiences
-    queries = []
-    responses = []
-    rewards = []
-    values = []
-    
-    for episode in range(config.batch_size):
-        # Initialize new episode
-        scene_data = SceneGenerator(split="train")()
-        env = Environment(scene_data)
-        rollout_past = []
+class LLMAgent_Planner_PPO(LLMAgent_Planner):
+    def __init__(
+        self,
+        persona_id: str,
+        policy_model,  # Pass the actual model instance
+        critic_model,  # Pass the actual critic instance
+        tokenizer_instance,  # Pass the tokenizer instance
+        temperature_planner: float = 0.7,
+        no_ask_option: bool = False,
+        user_info_with_summary: bool = False,
+        **kwargs
+    ):
+        # Manually set LLMAgent attributes to avoid loading a new model
+        self.model = policy_model  # This is the PPO actor
+        self.tokenizer = tokenizer_instance
+        self.device = self.model.device
+        self.model_in_path = getattr(policy_model.config, "_name_or_path", "ppo_model")
+        self.name_or_path = self.model_in_path
         
-        # Get task from your task distribution
-        current_task = "make breakfast"  # Replace with your task sampling logic
+        # Set default LLM parameters
+        self.default_llm_params = {
+            "max_new_tokens": 250,
+            "temperature": 1.0,
+            "sampling": False
+        }
         
-        # Reset agent state
-        ppo_planner_agent.reset()
+        # Set LLMAgent_Planner attributes
+        self.agent_name = "Planner_PPO"
+        self.persona_id = persona_id
+        self.user_info = ""
+        self.example_history = []
+        self.max_actions = 4
+        self.max_summaries = 4
+        self.probability_thresh = 0
+        self.temperature = temperature_planner
+        self.no_ask_option = no_ask_option
+        self.user_info_with_summary = user_info_with_summary
         
-        episode_queries = []
-        episode_responses = []
-        episode_rewards = []
-        episode_values = []
+        # Store critic model
+        self.critic = critic_model
+
+    def reset(self):
+        """Reset the planner state"""
+        self.user_info = ""
+        self.example_history = []
+
+    def add_user_info(self, info):
+        """Add user preference information"""
+        if info is None: 
+            return
+        self.user_info = info
+
+    def push_example(self, example_task, example_rollout):
+        """Add example to history"""
+        self.example_history.append((example_task, example_rollout))
+
+    def get_action_and_value(self, env, rollout_past, task):
+        """
+        Generate action using PPO policy and get value from critic.
+        Maintains consistency with evaluation pipeline by using existing methods.
+        """
+        # 1. Construct prompt using existing evaluation pipeline logic
+        prompt_msgs, _ = prompt_from_rollout(
+            rollout_past,
+            assistant="robot",
+            skip=[],
+            change_user_to=self.persona_id,
+            skip_failed=True,
+            action_only=True  # Consistent with evaluation
+        )
         
-        for step in range(max_episode_length):
-            # Collect one step
-            query_tensor, response_tokens, value, interaction_data = ppo_planner_agent.collect_rollout_step(
-                env, rollout_past, current_task
+        # Add example history (same as in LLMAgent_Planner.__call__)
+        for i_ex, (example_task, example_rollout) in enumerate(self.example_history):
+            prompt_msgs_ex, _ = prompt_from_rollout(
+                example_rollout,
+                assistant="robot",
+                skip=[],
+                change_user_to=self.persona_id,
+                skip_failed=True,
+                action_only=True,
             )
-            
-            # Calculate reward (implement your reward function)
-            step_reward = calculate_reward(interaction_data, env, rollout_past)
-            
-            # Store step data
-            episode_queries.append(query_tensor)
-            episode_responses.append(response_tokens)
-            episode_rewards.append(torch.tensor(step_reward, device=ppo_trainer.accelerator.device))
-            episode_values.append(value)
-            
-            # Update rollout history
-            rollout_past.append(interaction_data)
-            
-            # Check for episode termination
-            if interaction_data["action_enum"] == "done" or step == max_episode_length - 1:
-                break
+            prompt_msgs = (
+                [("user", f"Example {i_ex}, Task {example_task}:")]
+                + prompt_msgs_ex
+                + prompt_msgs
+            )
         
-        # Add episode data to batch
-        queries.extend(episode_queries)
-        responses.extend(episode_responses)
-        rewards.extend(episode_rewards)
-        values.extend(episode_values)
-    
-    # Perform PPO update
-    stats = ppo_trainer.step(queries, responses, rewards)
-    ppo_trainer.log_stats(stats, batch={"queries": queries, "responses": responses}, rewards=rewards)
+        # Construct spoonfeeding summary (same as evaluation)
+        spoonfeeding_summary = ''
+        if len(self.user_info) > 0 and self.user_info_with_summary:
+            spoonfeeding_summary += f"Remember, {self.persona_id}'s preferences include: " + self.user_info + "."
+        spoonfeeding_summary += f'What is the next step to complete the task: {task}?'
+        
+        # Create system prompt and full message list
+        system_prompt_msg = ("system", planner_system_prompt(
+            self.persona_id, self.user_info, env, task, 
+            no_ask_option=self.no_ask_option, action_only=True
+        ))
+        user_query_msg = ("user", spoonfeeding_summary)
+        
+        full_prompt_msgs = [system_prompt_msg] + prompt_msgs + [user_query_msg]
+        
+        # 2. Prepare tensors for PPO
+        # Query for generation (actor needs add_generation_prompt=True)
+        query_text = self.tokenizer.apply_chat_template(
+            [{"role": p[0], "content": p[1]} for p in full_prompt_msgs],
+            tokenize=False,
+            add_generation_prompt=True
+        )
+        query_tensor = self.tokenizer.encode(query_text, return_tensors="pt").to(self.device)
+        
+        # Query for value (critic typically doesn't need generation prompt)
+        value_query_text = self.tokenizer.apply_chat_template(
+            [{"role": p[0], "content": p[1]} for p in full_prompt_msgs],
+            tokenize=False,
+            add_generation_prompt=False
+        )
+        value_query_tensor = self.tokenizer.encode(value_query_text, return_tensors="pt").to(self.critic.device)
+        
+        # 3. Get value from critic
+        with torch.no_grad():
+            value = self.critic(value_query_tensor)[0].squeeze().detach()
+        
+        # 4. Generate action using existing grammar-constrained generation
+        action_grammar_str = create_grammar(env, no_ask_option=self.no_ask_option)
+        
+        # Use the existing run_llm method for consistency with evaluation
+        llm_outputs = self.run_llm(
+            prompt_msgs=full_prompt_msgs,
+            temperature=self.temperature,
+            constrained_gen_grammar=action_grammar_str,
+            add_generation_prompt=True
+        )
+        action_text = llm_outputs[0]["generation"].strip()
+        
+        # 5. Tokenize the generated action for PPO
+        response_tokens = self.tokenizer.encode(
+            action_text, return_tensors="pt", add_special_tokens=False
+        ).to(self.device).squeeze(0)
+        
+        return query_tensor.squeeze(0), response_tokens, value, action_text
 
-# Save the trained model
-ppo_trainer.save_pretrained("path/to/your/ppo_trained_model")
-
-def calculate_reward(interaction_data, env, rollout_past):
-    """
-    Implement your reward function here.
-    This should return a scalar reward for the current step.
-    """
-    reward = 0.0
-    
-    # Basic success reward
-    if interaction_data["success"]:
-        reward += 1.0
-    else:
-        reward -= 0.5
-    
-    # Task completion bonus
-    if interaction_data["action_enum"] == "done":
-        reward += 10.0
-    
-    # Add your task-specific reward logic here
-    # You can use process_trace for terminal rewards if needed
-    
-    return reward
+    def collect_rollout_step(self, env, rollout_past, task):
+        """
+        Collect one step of rollout data for PPO training.
+        Returns all necessary components for PPO update.
+        """
+        # Get action and value
+        query_tensor, response_tokens, value, action_text = self.get_action_and_value(
+            env, rollout_past, task
+        )
+        
+        # Step environment
+        success, observation_msg, action_enum, action_args = env.step(action_text)
+        
+        # Create interaction data (consistent with evaluation format)
+        interaction_data = {
+            "thought": "",  # PPO typically doesn't use explicit thoughts
+            "action": action_text,
+            "success": success,
+            "observation": observation_msg,
+            "action_enum": action_enum,
+            "action_args": action_args,
+        }
+        
+        return query_tensor, response_tokens, value, interaction_data
